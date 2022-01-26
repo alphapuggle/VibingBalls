@@ -1,0 +1,13 @@
+-=-=START=-=-
+<4/9/2021 19:40:23> Vibing Balls - FFA Server Started<4/9/2021 19:40:24> Building Generation Completed
+<4/9/2021 19:40:27> Unverified Client - 20429aad6172e84fe33886e9c3e821f1 - 73.174.187.150:61157
+73.174.187.150 | <Test> This is a test message
+73.174.187.150 | <Test> n*****s
+73.174.187.150 | <Test> fuck
+73.174.187.150 | <Test> shit
+73.174.187.150 | <Test> g**
+73.174.187.150 | <Test> f*****
+73.174.187.150 | <Test> q****
+<4/9/2021 19:42:5> 
+ERROR!
+ReferenceError: test is not defined

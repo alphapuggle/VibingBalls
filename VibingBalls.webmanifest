@@ -1,0 +1,22 @@
+{
+    "name": "Vibing Balls",
+    "short_name": "Vibing Balls",
+    "description": "They do be vibin tho",
+    "icons": [
+        {
+            "src": "ballFavicon-32.png",
+            "sizes": "32x32",
+            "type": "image/png"
+        },
+        {
+            "src": "ballFavicon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "start_url": "/VibingBalls",
+    "display": "fullscreen",
+    "theme_color": "#0099FF",
+    "background_color": "#0099FF",
+    "orientation": "portrait"
+}

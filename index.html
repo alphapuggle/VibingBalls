@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Vibing Balls</title>
+    <script src="/md5.js"></script>
+    <link href="/Font/css/Custom.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="icon" id="favIcon" href="/VibingBalls/ballFavicon-32.ico">
+    <script src="/consoleAd.js"></script>
+    <link rel="manifest" href="/VibingBalls/VibingBalls.webmanifest">
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0px;
+            padding: 0px;
+            font-family: Tahoma;
+            overflow: hidden;
+        }
+
+        html {
+            background-color: #1e1e1e;
+
+        }
+
+        .tooltip {
+            position: absolute;
+            color: lime;
+            font-family: Tahoma, Material Icons;
+        }
+
+        .tooltip.top {
+            top: 5px;
+            vertical-align: middle;
+        }
+
+        .tooltip.bottom {
+            bottom: 5px;
+        }
+
+        .tooltip.right {
+            right: 5px;
+            text-align: right;
+        }
+
+        .tooltip.left {
+            left: 5px;
+            text-align: left;
+        }
+
+        .tooltip.center-horiz {
+            left: 0px;
+            right: 0px;
+            margin: auto;
+            text-align: center;
+        }
+
+        .tooltip.center-vert {
+            top: 70%;
+            transform: translateY(-50%);
+            margin: auto;
+            text-align: center;
+        }
+
+        #chat {
+            width: 99%;
+            max-width: 99%;
+            margin: 0px;
+            border: 0px;
+            border-radius: 0px;
+            background-color: rgba(0, 0, 0, .25);
+            color: white;
+            font-size: 16px;
+            text-shadow: 2px 2px 0px black;
+            word-wrap:break-word;
+        }
+
+        #chat::placeholder {
+            color: white;
+            font-size: 16px;
+            text-shadow: 2px 2px 0px black;
+        }
+
+        #chat:focus {
+            outline: none;
+        }
+    </style>
+    <script>
+        function parseColor(color) {
+            var a = document.createElement("a");
+            document.body.appendChild(a);
+            a.style.color = color;
+            returnValue = window.getComputedStyle(a).color;
+            a.parentNode.removeChild(a);
+            return returnValue.replace("rgb(","").replace(")","").split(", ")
+        }
+        var conHex = (convert) => {
+            convert = parseInt(convert)
+            var hex = convert.toString(16);
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+        var revConHex = (convert) => {
+            convert = parseInt(convert,16)
+            var hex = convert.toString(10);
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+        var cookie = {
+            get: (cName) => {
+                for(Cookie of document.cookie.split("; ")) {
+                    name = Cookie.split("=")[0]
+                    value = Cookie.split("=")[1]
+                    if(name == cName && value.length > 0) {
+                        return value
+                    }
+                }
+                return undefined
+            },
+            set: (cName, value) => {
+                document.cookie = `${cName}=${value}`
+            },
+            delete: (cName) => {
+                document.cookie = `${cName}=`
+            }
+        }
+        var defaults = {
+            maxHealth: 10,
+            radius: 20,
+            buildingThickness: 20
+        }
+        /* Google Analytics */
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'UA-51765657-6');
+        
+        getSign = (value) => {
+            return value >= 0 ? 1 : -1;
+        }
+        $ = (selector) => {
+            return document.querySelectorAll(selector).length > 1 ? document.querySelectorAll(selector) : document.querySelectorAll(selector)[0];
+        }
+        const disconnectCodes = {
+            1000: "Normal Closure",
+            1001: "Going Away",
+            1002: "Protocol Error",
+            1003: "Unsupported Data",
+            1005: "Unknown",
+            1006: "Connection Lost",
+            1009: "Message Too Big",
+            1012: "Service Restart",
+            1014: "Bad Gateway",
+            4000: "Unverified Client",
+            4001: "Force Refresh"
+        }
+        var connection;
+        var gamemode = "UNKNOWN"
+        var ping = -1;
+        var lastEvent;
+        var Players = []
+        var Bullets = []
+        var clientID = -1
+        var controlScheme = ["M&K", 0];
+        var controlTooltip = {
+            "M&K": "\ue312 | Move: WASD / Space | Shoot: Click | Heal: LShift | Scoreboard: Tab | Menu: [E] | Chat: [T]",
+            "Controller": "\ue30f | Move: <span class='icon-LS'></span> / <span class='icon-A'></span> | Shoot: <span class='icon-RT'></span> | Heal: <span class='icon-X'></span> | Scoreboard: <span class='icon-Back'></span> | Menu: <span class='icon-Start'></span>"
+        }
+        class ToolTip {
+            constructor(text, duration, type, color = "lime") {
+                text = `${text.replace(new RegExp("<","g"),"&lt;").replace(new RegExp(">","g"),"&gt;").replace(new RegExp("\n","g"),"<br>")}<br>`
+                this.opacity = 0;
+                this.created = performance.now()
+                this.duration = duration;
+                this.parentElement = { tooltip: $(".tooltip.top.center-horiz"), message: $("#messages") }[type]
+                this.element = document.createElement("a")
+                this.element.innerHTML = `${text}`;
+                this.element.style.textStyle = "bold"
+                this.element.style.textSize = "20px";
+                this.element.style.textShadow = "2px 2px 0px black"
+                type == "message" ? this.element.style.backgroundColor = "rgba(0,0,0,.25)" : null;
+                type == "message" ? this.element.style.display = "block" : null;
+                this.element.style.opacity = this.opacity;
+                this.element.style.color = color;
+                this.parentElement.appendChild(this.element)
+                tooltips.push(this);
+                if (tooltips.length > 5) {
+                    var element = tooltips[0].element
+                    element.parentElement.removeChild(element)
+                    tooltips.splice(0, 1)
+                }
+            }
+            update = () => {
+                this.element.style.opacity = this.opacity;
+                if (performance.now() >= this.created + this.duration) {
+                    if (this.opacity <= 0) {
+                        this.parentElement.removeChild(this.element)
+                        tooltips.splice(tooltips.indexOf(this), 1);
+                    } else {
+                        this.opacity -= .01;
+                    }
+                } else if (this.opacity < 1) {
+                    this.opacity += .1;
+                }
+            }
+        }
+        var loginForm = {
+            form: document.createElement("form"),
+            username: document.createElement("input"),
+            color: document.createElement("input"),
+            colorClick: () => {
+                loginForm.form.appendChild(loginForm.color)
+                loginForm.color.style.left = `${cache.mouse.x}px`
+                loginForm.color.style.top = `${cache.mouse.y}px`
+                loginForm.color.click();
+                setTimeout(()=> {loginForm.color.click(); },10)
+            },
+            usernameClick:() => {
+                loginForm.form.appendChild(loginForm.username)
+                loginForm.username.style.left = `${cache.mouse.x}px`
+                loginForm.username.style.top = `${cache.mouse.y}px`
+                loginForm.username.click();
+                setTimeout(()=> {loginForm.username.focus(); },10)
+            }
+        }
+        loginForm.form.onsubmit = (e) => {
+            e.preventDefault();
+            console.log(loginForm.username.value, loginForm.color.value)
+            connection.send(JSON.stringify(
+                {
+                    event: "createPlayer",
+                    message: {
+                        username: loginForm.username.value,
+                        color: loginForm.color.value
+                    }
+                }
+            ))
+        }
+        loginForm.username.type = "text"
+        loginForm.color.type = "color"
+        loginForm.color.style.position = "absolute"
+        loginForm.username.style.position = "absolute"
+        loginForm.color.style.visibility = "hidden"
+        loginForm.color.value = `#${conHex(Math.random() * 256)}${conHex(Math.random() * 256)}${conHex(Math.random() * 256)}`
+        loginForm.username.style.opacity = "0"
+        var tooltips = [];
+        var pressedKeys = {
+            KeyW: false,
+            KeyA: false,
+            KeyS: false,
+            KeyD: false,
+            Space: false,
+            KeyE: false,
+            Mouse0: false,
+            Mouse1: false,
+            Mouse2: false,
+            Tab: false,
+            ShiftLeft: false,
+            KeyT: false,
+            Escape: false
+        }
+        var mouse = {
+            x: 0,
+            y: 0
+        }
+        var cache = {
+            controller: {
+                buttons: [],
+                axes: [],
+                previouslyConnected: false
+            },
+            connection: {
+                previouslyConnected: false,
+                tries: 5
+            },
+            frames: [0, 0, [0, 0], "Calculating "], //Frames this second, Frames last second, Max Frames
+            intervals: {},
+            lastCalcTime: performance.now(),
+            calcDif: 0,
+            calcRemain: 0,
+            sky: {
+                lastScene: "sunrise",
+                timer: 1000
+            },
+            menu: true,
+            menu1: false,
+            toggleAllowed: {
+                menu: true,
+                menu1: true,
+                bullet: true,
+                heal: true
+            },
+            viewfinder: {
+                x: 0,
+                y: 0
+            },
+            bounceLevel: 0,
+            menuValues: {
+                radius:0,
+                direction:1
+            },
+            mouse: {
+                x: 0,
+                y: 0,
+                button: 0,
+                lastButton: 0
+            }
+        }
+        window.onblur = () => {
+            if (connection.readyState == 1) {
+                pressedKeys = {
+                    KeyW: false,
+                    KeyA: false,
+                    KeyS: false,
+                    KeyD: false,
+                    Space: false,
+                    KeyE: false,
+                    Mouse0: false,
+                    Mouse1: false,
+                    Mouse2: false,
+                    Tab: false,
+                    ShiftLeft: false,
+                    KeyT: false,
+                    Escape: false
+                }
+            }
+        }
+        window.onkeydown = (event) => {
+            preventDefaults = ["Tab", "Escape"]
+            preventDefaults.includes(event.code) ? event.preventDefault() : null;
+            controlScheme[0] = "M&K"
+            pressedKeys[event.code] = true;
+        }
+        window.onkeyup = (event) => {
+            pressedKeys[event.code] = false;
+        }
+        window.onmousedown = (event) => {
+            controlScheme[0] = "M&K"
+            pressedKeys[`Mouse${event.button}`] = true;
+            window.onmousemove(event)
+        }
+        window.onmouseup = (event) => {
+            pressedKeys[`Mouse${event.button}`] = false;
+            window.onmousemove(event)
+        }
+        window.onmousemove = (ev) => {
+            cache.mouse.x = ev.offsetX
+            cache.mouse.y = ev.offsetY
+            cache.mouse.lastButton = cache.mouse.button
+            cache.mouse.button = ev.buttons
+        }
+        updatePosition = (e) => {
+            if (mouse.x + e.movementX <= 1000 && mouse.x + e.movementX >= -1000) {
+                clearInterval(cache.intervals.mousex);
+                mouse.x += e.movementX
+                cache.intervals.mousex = setTimeout(() => { mouse.x = 0; mouse.y = 0 }, 500)
+            }
+            if (mouse.y + e.movementY <= 1000 && mouse.y + e.movementY >= -1000) {
+                clearInterval(cache.intervals.mousey);
+                mouse.y += e.movementY
+                cache.intervals.mousey = setTimeout(() => { mouse.x = 0; mouse.y = 0 }, 500)
+            }
+        }
+        var controlHandling = {
+            update: () => {
+                cache.calcDif = performance.now() - cache.lastCalcTime
+                cache.lastCalcTime = performance.now();
+                player = Players[clientID];
+                gamepads = navigator.getGamepads();
+                cache.calcDif - 13 >= 0 ? cache.calcRemain += cache.calcDif - 13 : null
+                var tries = Math.ceil(cache.calcRemain / 13)
+                if (typeof (Players[clientID]) != "undefined") {
+                    for (var i = 0; i < tries; i++) {
+                        cache.calcRemain >= 13 ? cache.calcRemain -= 13 : null;
+                        if (player.health > 0) {
+                            player.velocity.y *= 0.99;
+                            player.velocity.y += 0.25;
+                            if (player.position.y >= cache.bounceLevel - defaults.radius) {
+                                player.velocity.y = -player.velocity.y;
+                                if (player.nextCommand.includes("_01_")) {
+                                    player.velocity.y = -15
+                                    player.nextCommand = "";
+                                }
+                            }
+                            if (player.position.y + defaults.radius > cache.bounceLevel) {
+                                player.position.y = cache.bounceLevel - defaults.radius;
+                            }
+                            player.position.y += player.velocity.y
+                            player.position.x += player.velocity.x
+                        } else {
+                            player.velocity.y = -5
+                            player.position.y = 0
+                            player.position.x = 0
+                            canvas.offset = player.position.x - canvas.width / 2
+                        }
+
+
+                        for (index in Bullets) {
+                            bullet = Bullets[index]
+                            bullet.velocity.y *= .99;
+                            bullet.velocity.y += .2;
+                            for (var target of Players) {
+                                if (typeof (target) != "undefined" && target.id != bullet.firedFrom && target.health > 0 && (gamemode.includes("FFA") || (gamemode.includes("TEAMS") && bullet.firedFrom % 2 != target.id % 2))) {
+                                    if (bullet.position.x + bullet.velocity.x > target.position.x - defaults.radius &&
+                                        bullet.position.y + bullet.velocity.y > target.position.y - defaults.radius &&
+                                        bullet.position.x + bullet.velocity.x < target.position.x + defaults.radius &&
+                                        bullet.position.y + bullet.velocity.y < target.position.y + defaults.radius) {
+                                        bullet.position.y = 10000
+                                    }
+                                }
+                            }
+                            if (bullet.position.y + bullet.velocity.y < 0) {
+                                bullet.position.x += bullet.velocity.x;
+                                bullet.position.y += bullet.velocity.y;
+                            } else {
+                                Bullets.splice(index, 1)
+                            }
+                        }
+                        var tempLevel = 0
+                        for (index in buildings.array) {
+                            building = buildings.array[index]
+                            x = building.x - canvas.offset;
+                            y = canvas.ground - building.height
+                            if (x <= canvas.width && x + building.width + defaults.buildingThickness >= 0) {
+                                if (player.position.x >= building.x - defaults.buildingThickness && player.position.x <= building.x + building.width + defaults.buildingThickness) {
+                                    if (player.position.y <= -building.height) {
+                                        if (building.height > tempLevel) {
+                                            tempLevel = building.height
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        cache.bounceLevel = -tempLevel
+                    }
+                    //Movement
+
+                    if (controlScheme[0] == "M&K") {
+                        if (cache.controller.previouslyConnected && cache.controller.currentlyConnected && cache.controller.buttons != gamepads[controlScheme[1]].buttons && cache.controller.axes != gamepads[controlScheme[1]].axes) {
+                            controlScheme[0] = "Controller"
+                        }
+                        if ($("#chat").style.display == "none") {
+                            if (pressedKeys.KeyD && !pressedKeys.KeyA) {
+                                controlHandling.move(5)
+                            } else if (pressedKeys.KeyA && !pressedKeys.KeyD) {
+                                controlHandling.move(-5)
+                            } else {
+                                controlHandling.move(0)
+                            }
+
+                            if (pressedKeys.Space) {
+                                controlHandling.jump()
+                            }
+                            if (pressedKeys.KeyE) {
+                                controlHandling.mainMenu();
+                            }
+                            if (pressedKeys.Tab) {
+                                cache.menu1 = true
+                                cache.menu = false
+                            } else {
+                                cache.menu1 = false
+                            }
+                            if (pressedKeys.ShiftLeft) {
+                                controlHandling.requestHeal()
+                            }
+                            xAxis = Math.abs(mouse.x)
+                            yAxis = Math.abs(mouse.y);
+                            angle = Math.atan(xAxis / yAxis)
+                            x = player.position.x + (Math.sin(angle) * 100 * getSign(mouse.x)) - canvas.offset
+                            y = player.position.y + (Math.cos(angle) * 100 * getSign(mouse.y)) + canvas.ground
+                            cache.viewfinder.x = x;
+                            cache.viewfinder.y = y;
+                            if (pressedKeys.Mouse0 && !isNaN(x) && !isNaN(y)) {
+                                controlHandling.viewfinder(x, y);
+                            }
+                        }
+                        if (pressedKeys.KeyT) {
+                            controlHandling.openChat()
+                        }
+                    } else if (controlScheme[0] == "Controller") {
+                        if (gamepads[controlScheme[1]].axes[0] > .1) {
+                            controlHandling.move(5 * gamepads[controlScheme[1]].axes[0])
+                        } else if (gamepads[controlScheme[1]].axes[0] < -.1) {
+                            controlHandling.move(5 * gamepads[controlScheme[1]].axes[0])
+                        } else {
+                            controlHandling.move(0)
+                        }
+
+                        if (gamepads[controlScheme[1]].buttons[0].pressed) {
+                            controlHandling.jump()
+                        }
+                        if (gamepads[controlScheme[1]].buttons[9].pressed) {
+                            controlHandling.mainMenu()
+                        }
+                        if (gamepads[controlScheme[1]].buttons[8].pressed) {
+                            controlHandling.scoreboard()
+                        }
+                        if (gamepads[controlScheme[1]].buttons[12].pressed) {
+                            window.location.reload(true)
+                        }
+                        if (gamepads[controlScheme[1]].buttons[2].pressed) {
+                            controlHandling.requestHeal()
+                        }
+
+                        xAxis = Math.abs(gamepads[controlScheme[1]].axes[2]) > .15 || Math.abs(gamepads[controlScheme[1]].axes[3]) > .15 ? Math.abs(gamepads[controlScheme[1]].axes[2]) : 0;
+                        yAxis = Math.abs(gamepads[controlScheme[1]].axes[2]) > .15 || Math.abs(gamepads[controlScheme[1]].axes[3]) > .15 ? Math.abs(gamepads[controlScheme[1]].axes[3]) : 0;
+                        angle = Math.atan(xAxis / yAxis)
+                        x = player.position.x + (Math.sin(angle) * 100 * getSign(gamepads[controlScheme[1]].axes[2])) - canvas.offset
+                        y = player.position.y + (Math.cos(angle) * 100 * getSign(gamepads[controlScheme[1]].axes[3])) + canvas.ground
+                        cache.viewfinder.x = x;
+                        cache.viewfinder.y = y;
+                        if (gamepads[controlScheme[1]].buttons[7].value > 0) {
+                            controlHandling.viewfinder(x, y);
+                        }
+                    }
+                    if (cache.controller.previouslyConnected && cache.controller.currentlyConnected) {
+                        cache.controller.buttons = gamepads[controlScheme[1]].buttons
+                        cache.controller.axes = gamepads[controlScheme[1]].axes
+                    }
+                }
+            },
+            move: (amount) => {
+                player.velocity.x = amount;
+                canvas.offset = player.position.x - canvas.width / 2;
+            },
+            jump: () => {
+                player.nextCommand = "_01_";
+            },
+            mainMenu: () => {
+                clearInterval(cache.intervals.menu);
+                if (cache.toggleAllowed.menu) {
+                    cache.menu = !cache.menu
+                    cache.menu1 = false
+                    cache.toggleAllowed.menu = false
+                }
+                cache.intervals.menu = setTimeout(() => { cache.toggleAllowed.menu = true; }, 20)
+            },
+            scoreboard: () => {
+                clearInterval(cache.intervals.menu1);
+                if (cache.toggleAllowed.menu1) {
+                    cache.menu1 = !cache.menu1
+                    cache.menu = false
+                    cache.toggleAllowed.menu1 = false
+                }
+                cache.intervals.menu1 = setTimeout(() => { cache.toggleAllowed.menu1 = true; }, 20)
+            },
+            viewfinder: (x, y) => {
+                if (cache.toggleAllowed.bullet && !isNaN(x) && !isNaN(y)) {
+                    clearInterval(cache.intervals.bullet);
+                    connection.send(JSON.stringify(
+                        {
+                            event: "bullet",
+                            message: {
+                                x: x - player.position.x + canvas.offset,
+                                y: y - player.position.y - canvas.ground
+                            }
+                        }
+                    ))
+                    cache.toggleAllowed.bullet = false
+                    cache.intervals.bullet = setTimeout(() => { cache.toggleAllowed.bullet = true; }, 200)
+                }
+                clearInterval(cache.intervals.mousex);
+                clearInterval(cache.intervals.mousey);
+                cache.intervals.mousex = setTimeout(() => { mouse.x = 0; mouse.y = 0 }, 500)
+                cache.intervals.mousey = setTimeout(() => { mouse.x = 0; mouse.y = 0 }, 500)
+            },
+            requestHeal: () => {
+                if (cache.toggleAllowed.heal) {
+                    clearInterval(cache.intervals.heal);
+                    connection.send(JSON.stringify(
+                        {
+                            event: "requestheal",
+                            message: {
+                                x: x - player.position.x + canvas.offset,
+                                y: y - player.position.y - canvas.ground
+                            }
+                        }
+                    ))
+                    cache.toggleAllowed.heal = false
+                    cache.intervals.heal = setTimeout(() => { cache.toggleAllowed.heal = true; }, 200)
+                }
+            },
+            openChat: () => {
+                if ($("#chat").style.display == "none") {
+                    document.exitPointerLock();
+                    $("#chat").placeholder = `Message`;
+                    $("#chat").style.display = "inline-block";
+                    $("#chat").style.color = Players[clientID].color;
+                    $("#chat").focus();
+                    $("#chat").onkeydown = (event) => {
+                        if (event.code.includes("Enter")) {
+                            connection.send(JSON.stringify(
+                                {
+                                    event: "chat",
+                                    message: $("#chat").value
+                                }
+                            ))
+                            $("#chat").value = "";
+                            $("#chat").style.display = "none"
+                        } else if (event.code == "Escape") {
+                            controlHandling.closeChat()
+                        }
+                    }
+                    $("#chat").onblur = () => {
+                        controlHandling.closeChat();
+                    }
+                }
+            },
+            closeChat: () => {
+                if ($("#chat").style.display == "inline-block") {
+                    $("#chat").style.display = "none"
+                    $("#chat").value = "";
+                }
+            }
+        }
+        class Building {
+            constructor(x, width, height, color, healing = false) {
+                this.x = x
+                this.width = width
+                this.height = height
+                this.color = color
+                this.healing = healing
+            }
+        }
+        var buildings = {
+            array: [],
+            draw: function () {
+                for (index in this.array) {
+                    building = this.array[index]
+                    x = building.x - canvas.offset;
+                    y = canvas.ground - building.height
+                    if (x <= canvas.width && x + building.width + defaults.buildingThickness >= 0) {
+                        canvas.draw.building(x, y, building.width, building.height, building.color, defaults.buildingThickness, building.healing)
+                        //canvas.draw.text(index, x, y, "both", {color: "red"})
+                    }
+                }
+            }
+        }
+        var sky = {
+            currentScene: "night",
+            background: {
+                darkeners: {
+                    sunrise: .25,
+                    sunset: .25,
+                    day: 0,
+                    night: .6,
+                    midnight: .7,
+                    a1: 0,
+                },
+                draw: (opacity = 1, scene = "sunset") => {
+                    var scenes = {
+                        sunset: canvas.gradient.linear(canvas.ctx, canvas.width / 2, canvas.ground, canvas.width / 2, 0, {
+                            stops: [0, .5, 1],
+                            colors: [
+                                `rgba(255,165,0, ${opacity} )`,
+                                `rgba(255,69,0, ${opacity} )`,
+                                `rgba(75,0,130, ${opacity} )`
+                            ]
+                        }),
+                        sunrise: canvas.gradient.linear(canvas.ctx, canvas.width / 2, canvas.ground, canvas.width / 2, 0, {
+                            stops: [0, .25, 1],
+                            colors: [
+                                `rgba(255,165,0, ${opacity} )`,
+                                `rgba(255,69,0, ${opacity} )`,
+                                `rgba(0,0,128, ${opacity} )`
+                            ]
+                        }),
+                        day: canvas.gradient.linear(canvas.ctx, canvas.width / 2, canvas.ground, canvas.width / 2, 0, {
+                            stops: [0, 1],
+                            colors: [
+                                `rgba(135,206,250, ${opacity} )`,
+                                `rgba(0,191,255, ${opacity} )`
+                            ]
+                        }),
+                        night: canvas.gradient.linear(canvas.ctx, canvas.width / 2, canvas.ground, canvas.width / 2, 0, {
+                            stops: [0, .8],
+                            colors: [
+                                `rgba(0,0,255, ${opacity} )`,
+                                `rgba(0,0,128, ${opacity} )`
+                            ]
+                        }),
+                        midnight: canvas.gradient.linear(canvas.ctx, canvas.width / 2, canvas.ground, canvas.width / 2, 0, {
+                            stops: [0, 1],
+                            colors: [
+                                `rgba(0,0,128, ${opacity} )`,
+                                `rgba(25,25,112, ${opacity} )`
+                            ]
+                        }),
+                        a1: canvas.gradient.linear(canvas.ctx, canvas.width / 2, canvas.ground, canvas.width / 2, 0, {
+                            stops: [0, .33, .66, 1],
+                            colors: [
+                                `rgba(138,43,226, ${opacity} )`,
+                                `rgba(139,0,139, ${opacity} )`,
+                                `rgba(148,0,211, ${opacity} )`,
+                                `rgba(153,50,204, ${opacity} )`
+                            ]
+                        }),
+                    }
+                    canvas.draw.rectangle(0, 0, canvas.width, canvas.ground, "fill", { color: scenes[scene] })
+                    sky.currentDarkener = sky.background.darkeners[scene]
+                }
+            },
+            star: class {
+                constructor() {
+                    this.x = Math.random() * (1000000) - 500000;
+                    this.y = Math.floor(Math.random() * 1000) / 1000;
+                    this.direction = .01 + Math.random() / 100;
+                    this.radius = Math.random() * 2;
+                    this.max = Math.random() * 2;
+                }
+            },
+            stars: {
+                array: [],
+                generate: () => {
+                    for (i = 0; i < 75000; i++) {
+                        sky.stars.array.push(new sky.star())
+                    }
+                },
+                draw: () => {
+                    for (star of sky.stars.array) {
+                        //circle: (x, y, radius, method = "FILL", options = {})
+                        if (star.x - canvas.offset / 50 > 0 && star.x - canvas.offset / 50 < canvas.width) {
+                            canvas.draw.circle(star.x - canvas.offset / 50, star.y * canvas.ground, star.radius, "fill", { color: `rgba(255,255,255, ${sky.darkener / .7})` })
+                            if (star.radius + star.direction > star.max || star.radius + star.direction < 1) {
+                                star.direction = -star.direction
+                            } else {
+                                star.radius += star.direction
+                            }
+                        }
+                    }
+                }
+            },
+            mountain: class {
+                constructor(x) {
+                    this.x = x;
+                    this.y = Math.floor(Math.random() * 1000) / 1000;;
+                }
+            },
+            mountains: {
+                array: [],
+                draw: () => {
+                    for (var i = 0; i < 2; i++) {
+                        var offMod = [10, 5][i]
+                        var horMod = [0, 1000][i]
+                        var heightMod = [4, 16][i]
+                        var fillMod = ["#DCDCD0AA", "#ABB6B0AA"][i]
+                        canvas.ctx.beginPath();
+                        canvas.ctx.moveTo(-50000, canvas.ground)
+                        var lastIterator = 0;
+                        for (var iterator in sky.mountains.array) {
+                            mountain = sky.mountains.array[parseInt(iterator)];
+                            //circle: (x, y, radius, method = "FILL", options = {})
+                            if (mountain.x - canvas.offset / offMod + horMod > -1000 && mountain.x - canvas.offset / offMod + horMod < canvas.width + 1000) {
+                                canvas.ctx.lineTo(mountain.x - canvas.offset / offMod + horMod, -100 + canvas.ground - (canvas.ground * mountain.y / heightMod))
+                                lastIterator = parseInt(iterator)
+                            }
+                        }
+                        canvas.ctx.lineTo(canvas.width + 50000, canvas.height)
+                        canvas.ctx.fillStyle = fillMod
+                        canvas.ctx.fill();
+                    }
+                },
+                generate: () => {
+                    sky.mountains.array.push(new sky.mountain(-750000))
+                    for (var i = 1; i < 7500; i++) {
+                        sky.mountains.array.push(new sky.mountain(sky.mountains.array[i - 1].x + 100 + Math.random() * 200))
+                    }
+                }
+            },
+            darkener: 0,
+            draw: () => {
+                sky.currentScene = sky.getScene();
+                sky.background.draw(1, sky.currentScene);
+                if (cache.sky.lastScene != sky.currentScene) {
+                    if (cache.sky.timer > 0) {
+                        sky.background.draw(cache.sky.timer / 1000, cache.sky.lastScene);
+                        cache.sky.timer--;
+                    } else {
+                        cache.sky.timer = 1000;
+                        cache.sky.lastScene = sky.currentScene;
+                    }
+                }
+                sky.darkener = (sky.background.darkeners[cache.sky.lastScene] - (1 - (cache.sky.timer / 1000)) * (sky.background.darkeners[cache.sky.lastScene] - sky.background.darkeners[sky.currentScene]));
+                sky.stars.draw();
+                sky.mountains.draw();
+            },
+            getScene: () => {
+                var hour = new Date().getHours();
+                return hour >= 0 && hour < 4 ?
+                    "midnight" :
+                    hour >= 4 && hour < 6 ?
+                        "night" :
+                        hour >= 6 && hour < 7 ?
+                            "sunrise" :
+                            hour >= 7 && hour < 18 ?
+                                "day" :
+                                hour >= 18 && hour < 20 ?
+                                    "sunset" :
+                                    hour >= 20 && hour < 22 ?
+                                        "night" :
+                                        "midnight"
+            }
+        }
+        window.addEventListener("gamepadconnected", (e) => {
+            cache.controller.previouslyConnected = true;
+            cache.controller.currentlyConnected = true;
+            controlScheme[0] = "Controller";
+            controlScheme[1] = e.gamepad.index;
+        })
+        window.addEventListener("gamepaddisconnected", (e) => {
+            cache.controller.previouslyConnected = true;
+            cache.controller.currentlyConnected = false;
+            controlScheme[0] = "M&K";
+            controlScheme[1] = 0;
+        })
+        openConnection = (url) => {
+            connection = new WebSocket(url);
+            clearInterval(cache.intervals.controlHandling)
+            cache.intervals.controlHandling = setInterval(controlHandling.update, 13)
+            connection.onopen = () => {
+                Players = [];
+                Bullets = [];
+                cache.connection.tries = 5;
+                connection.send(JSON.stringify(
+                    {
+                        event: "MD5",
+                        message: md5Base
+                    }
+                ))
+                md5Base = undefined;
+            }
+            connection.onerror = (error) => {
+            }
+            connection.onclose = (close) => {
+                if (close.code.toString().split("")[0] != "4") {
+                    cache.connection.previouslyConnected = true;
+                    cache.connection.tries > 0 ? cache.connection.tries-- : null;
+                    if (close.reason) {
+                        new ToolTip(close.reason, 10000, "tooltip", "red");
+                    } else if (close.code == 1006) {
+                        new ToolTip("Server Closed Unexpectedly", 10000, "tooltip", "red");
+                    } else if (close.code == 1012) {
+                        new ToolTip("Server Restarting!", 10000, "tooltip", "red");
+                    }
+                    cache.connection.tries > 0 ? openConnection(url) : null;
+                } else {
+                    cache.connection.tries = 0;
+                    cache.connection.previouslyConnected = true
+                    if (close.code == 4000) {
+                        alert("Your client is unverified. Try refreshing your client or using the official client!")
+                        new ToolTip("Your client is unverified. Try refreshing your client or using the official client!", 100000000, "tooltip", "red")
+                    } else if (close.code == 4001) {
+                        window.location.reload(true)
+                    } else if (close.code == 4002) {
+                        alert("Your IP has been banned!")
+                        new ToolTip("Your IP has been banned!", 100000000, "tooltip", "red")
+                    } else if (close.code == 4003) {
+                        new ToolTip(`You've been suspected of cheating!\nThis may be due to internet or frame lag\nIt's recommended to play on a PC and to only connect once per machine`, 100000000, "tooltip", "red")
+                    }
+                }
+            }
+            connection.onmessage = (e) => {
+                message = e.data;
+                data = isJSON(message) ? JSON.parse(message) : { event: "nonJSON", message: message }
+                var actions = {
+                    test: () => {
+                        console.log("Test");
+                    },
+                    player: () => {
+                        try {
+                            Players[data.message.id] = data.message;
+                            if(data.message.id == clientID) {
+                                cache.menu = true;
+                                setTimeout(() => { cache.menu = false; }, 1000)
+                            }
+                        } catch (e) { }
+                    },
+                    playerdisconnect: () => {
+                        Players[data.message.id] = undefined;
+                    },
+                    latency: () => {
+                        ping = data.message;
+                    },
+                    assignid: () => {
+                        clientID = data.message;
+                    },
+                    initialize: () => {
+                        buildings.array = data.message.buildings;
+                        defaults = data.message.defaults;
+                        gamemode = data.message.gamemode;
+                    },
+                    bulletcreate: () => {
+                        Bullets.push(
+                            {
+                                id: data.message.id,
+                                position: data.message.position,
+                                velocity: data.message.velocity,
+                                firedFrom: data.message.firedFrom,
+                                color: data.message.color
+                            }
+                        )
+                    },
+                    health: () => {
+                        Players[data.message.id].health = data.message.health
+                    },
+                    tooltip: () => {
+                        new ToolTip(data.message.text, data.message.duration, "tooltip", data.message.color)
+                    },
+                    message: () => {
+                        new ToolTip(data.message.text, data.message.duration, "message", data.message.color)
+                    },
+                    stat: () => {
+                        Players[data.message.id].kills = data.message.kills
+                        Players[data.message.id].deaths = data.message.deaths
+                        Players[data.message.id].hit = data.message.hit
+                        Players[data.message.id].fired = data.message.fired
+                    },
+                    nonjson: () => {
+                        console.log(data.message)
+                    }
+                }
+                typeof (actions[data.event.toLowerCase()]) != "undefined" ? actions[data.event.toLowerCase()]() : console.log("\x1b[31m\x1b[1m%s\x1b[0m", `ERROR!\n JSON recieved that was not a valid action!`, data);;
+            }
+            function isJSON(data) {
+                try {
+                    return JSON.parse(data);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+        }
+        var canvas = {
+            draw: {
+                options: (options) => {
+                    canvas.ctx.fillStyle = options.color || "black";
+                    canvas.ctx.strokeStyle = options.color || "black";
+                    canvas.ctx.font = `${(options.textStyle || "normal")} ${(`${options.size || 100}px`)} ${(options.font || "Tahoma")}`;
+                    canvas.ctx.textAlign = (options.align || "start") //start, end, left, right, center
+                    canvas.ctx.textBaseline = (options.baseline || "alphabetic") //top, hanging, middle, alphabetic, ideographic, bottom
+                    canvas.ctx.direction = (options.direction || "inherit") //ltr, ltr, inherit
+                    canvas.ctx.shadowBlur = (options.shadowBlur || 0);
+                    canvas.ctx.lineWidth = (options.lineWidth || 1);
+                    canvas.ctx.shadowOffsetX = (options.shadowOffset || 0);
+                    canvas.ctx.shadowOffsetY = (options.shadowOffset || 0);
+                    canvas.ctx.shadowColor = (options.shadowColor || "black");
+                    canvas.ctx.lineJoin = (options.lineJoin || "miter");
+                },
+                rectangle: (x, y, width, height, method = "fill", options = {}) => {
+                    ctxPre = canvas.ctx;
+                    canvas.draw.options(options)
+                    method.toLowerCase() == "fill" ? canvas.ctx.fillRect(x, y, width, height) : method.toLowerCase() == "stroke" ? canvas.ctx.strokeRect(x, y, width, height) : method.toLowerCase() == "clear" ? canvas.ctx.clearRect(x, y, width, height) : null;
+                    if (method.toLowerCase() == "both") {
+                        canvas.ctx.fillRect(x, y, width, height)
+                        options.color = "black"
+                        canvas.draw.options(options)
+                        canvas.ctx.strokeRect(x, y, width, height)
+                    }
+                    canvas.ctx = ctxPre;
+                },
+                circle: (x, y, radius, method = "FILL", options = {}) => {
+                    ctxPre = canvas.ctx;
+                    canvas.draw.options(options)
+                    canvas.ctx.beginPath();
+                    canvas.ctx.arc(x, y, radius, 0, Math.PI * 2)
+                    method.toLowerCase() == "fill" ? canvas.ctx.fill() : method.toLowerCase() == "stroke" ? canvas.ctx.stroke() : null;
+                    if (method.toLowerCase() == "both") {
+                        canvas.ctx.fill()
+                        options.color = (options.outColor || "black")
+                        canvas.draw.options(options)
+                        canvas.ctx.stroke()
+                    }
+                    canvas.ctx = ctxPre;
+                },
+                text: (text, x, y, method = "fill", options = {}) => {
+                    ctxPre = canvas.ctx;
+                    canvas.draw.options(options)
+                    method.toLowerCase() == "fill" ? canvas.ctx.fillText(text, x, y, (options.maxWidth)) : method.toLowerCase() == "stroke" ? canvas.ctx.strokeText(text, x, y, (options.maxWidth)) : null;
+                    if (method.toLowerCase() == "both") {
+                        canvas.ctx.fillText(text, x, y, (options.maxWidth))
+                        options.color = "black"
+                        canvas.draw.options(options)
+                        canvas.ctx.strokeText(text, x, y, (options.maxWidth))
+                    }
+                    canvas.ctx = ctxPre;
+                },
+                line: (positions = { x: [], y: [] }, polygon = false, options = {}) => {
+                    ctxPre = canvas.ctx;
+                    canvas.draw.options(options)
+                    canvas.ctx.beginPath();
+                    canvas.ctx.moveTo(positions.x[0], positions.y[0]);
+                    for (var i in positions.x) {
+                        canvas.ctx.lineTo(positions.x[i], positions.y[i]);
+                    }
+                    canvas.ctx.closePath();
+                    polygon ? canvas.ctx.fill() : canvas.ctx.stroke();
+                    canvas.ctx = ctxPre;
+                },
+                building: (x, y, width, height, color, thickness, healing) => {
+                    ctxPre = canvas.ctx;
+                    canvas.draw.rectangle((x) - thickness, (y) + thickness, width, height, "fill", { color: color });
+                    var colorray = [color, "rgba(0,0,0,.75)"];
+                    for (var i = 0; i < colorray.length + 1; i++) {
+                        canvas.draw.line({
+                            x: [x - thickness, x, x + width, x + width, x + width - thickness, x + width - thickness, x + width, x + width - thickness, x - thickness],
+                            y: [y + thickness, y, y, y + height, y + height + thickness, y + thickness, y, y + thickness, y + thickness]
+                        }, i < 2 ? true : false, { color: colorray[i] })
+                        if (i == colorray.length && healing) {
+                            canvas.draw.options({ shadowBlur: 2, shadowOffset: 2, color: "white" })
+                            canvas.ctx.stroke();
+                            canvas.draw.rectangle(x - thickness, y + thickness, width, height, "stroke", { color: "white" });
+                            canvas.draw.rectangle(x - thickness + (9 * width / 20), y + thickness + height / 3, width / 10, height / 3, "fill", { color: "red" });
+                            canvas.draw.rectangle(x - thickness + (width / 3), y + thickness + 9 * height / 20, width / 3, height / 10, "fill", { color: "red" });
+                        }
+                    }
+                    canvas.ctx = ctxPre;
+                },
+                player: (player) => {
+                    if (typeof (player) != "undefined" && player.health > 0) {
+                        xPos = player.id == clientID ? canvas.width / 2 : player.position.x - canvas.offset
+                        yPos = player.position.y + canvas.ground
+                        if (xPos + defaults.radius > 0 && xPos - defaults.radius < canvas.width) {
+                            modifier = ((player.position.x % (4 * defaults.radius * Math.PI)) / (4 * defaults.radius * Math.PI)) * (Math.PI * 2)
+                            color = player.color;
+                            canvas.draw.circle(xPos, yPos, defaults.radius, "fill", { color: color, shadowBlur: defaults.radius / 5, shadowOffset: defaults.radius / 5 })
+                            canvas.draw.text(player.username, xPos, yPos - defaults.radius - 15, "both", { size: defaults.radius, color: player.id == clientID ? "orange" : "white", align: "center", baseline: "middle", textStyle: "bold" })
+                        } else if (xPos < 0) {
+                            canvas.draw.text(`< ${player.username}`, 0, yPos - defaults.radius - 15, "both", { size: defaults.radius, color: player.color, align: "left", baseline: "middle", textStyle: "bold" })
+                        } else if (xPos > canvas.width) {
+                            canvas.draw.text(`${player.username} >`, canvas.width, yPos - defaults.radius - 15, "both", { size: defaults.radius, color: player.color, align: "right", baseline: "middle", textStyle: "bold" })
+                        }
+                        colors = {
+                            1: "red",
+                            2: "darkorange",
+                            3: "gold",
+                            4: "lime"
+                        }
+                        canvas.draw.rectangle(xPos - defaults.radius, yPos + defaults.radius + 7, defaults.radius * 2 + defaults.radius / 5, 10, "both", { color: "black" })
+                        canvas.draw.rectangle(xPos - defaults.radius, yPos + defaults.radius + 7, (defaults.radius * 2 + defaults.radius / 5) * (player.health / defaults.maxHealth), 10, "both", { color: colors[Math.ceil(4 * (player.health / defaults.maxHealth))] })
+                    }
+                },
+            },
+            gradient: {
+                linear: (targetCtx, x1, y1, x2, y2, colors = { stops: [], colors: [] }) => {
+                    gradient = targetCtx.createLinearGradient(x1, y1, x2, y2)
+                    for (var i = 0; i < colors.stops.length; i++) {
+                        gradient.addColorStop(colors.stops[i], colors.colors[i]);
+                    }
+                    return gradient
+                },
+                radial: (targetCtx, x1, y1, r1, x2, y2, r2, colors = { stops: [], colors: [] }) => {
+                    gradient = targetCtx.createRadialGradient(x1, y1, r1, x2, y2, r2)
+                    for (var i = 0; i < colors.stops.length; i++) {
+                        gradient.addColorStop(colors.stops[i], colors.colors[i]);
+                    }
+                    return gradient
+                }
+            }
+        }
+        window.onload = () => {
+            md5Base = md5.encrypt(
+                `${document.documentElement.outerHTML.replace(/\s/g,"")}`
+            );
+            console.log(`${document.documentElement.outerHTML.replace(/\s/g,"")}`)
+            document.body.appendChild(loginForm.form)
+            canvas.element =  $("#gameCanvas")
+            canvas.ctx = $("#gameCanvas").getContext("2d")
+            cache.sky.lastScene = sky.getScene();
+            setInterval(function () { cache.frames[1] = cache.frames[0]; cache.frames[0] = 0; if (cache.frames[2][1] >= 10) { cache.frames[3] = Math.ceil(cache.frames[2][0] / cache.frames[2][1]) } else { cache.frames[2][0] += cache.frames[1]; cache.frames[2][1]++ } }, 1000);
+            document.addEventListener("pointerlockchange", () => {
+                if (document.pointerLockElement == canvas.element) {
+                    document.addEventListener("mousemove", updatePosition, false);
+                } else {
+                    document.removeEventListener("mousemove", updatePosition, false);
+                    mouse.x = 0;
+                    mouse.y = 0;
+                }
+            })
+            sky.stars.generate()
+            sky.mountains.generate()
+            openConnection(`wss://${window.location.host}:8423`);
+            window.requestAnimationFrame(render)
+            window.onresize();
+        }
+        window.onresize = (e) => {
+            $("#gameCanvas").width = window.innerWidth;
+            $("#gameCanvas").height = window.innerHeight;
+            typeof (canvas.offset) == "undefined" ? canvas.offset = 0 : canvas.offset += canvas.width / 2;
+            canvas.width = window.innerWidth;
+            canvas.offset -= canvas.width / 2
+            canvas.height = window.innerHeight;
+            canvas.ground = canvas.height - canvas.height / 4;
+            canvas.groundGradient = canvas.gradient.linear(canvas.ctx, 0, canvas.ground - (canvas.ground / 32), 0, canvas.height, {
+                stops: [.05, .1, .2, .3, 1],
+                colors: ["rgb(0,128,0)", "rgb(0,100,0)", "rgb(0,100,0)", "rgb(112,56,16)", "rgb(179,89,25)"]
+            });
+        }
+        render = () => {
+            modifier = (cache.menuValues.radius + .01) / 16 * cache.menuValues.direction
+            cache.menuValues.radius + modifier < 0 || cache.menuValues.radius + modifier > 1 ? cache.menuValues.direction *= -1 : cache.menuValues.radius += modifier;
+            menuCircle = canvas.width / 16 + (cache.menuValues.radius * canvas.width / 32);
+            textSize = menuCircle / 2
+            //Reset Canvas
+            canvas.draw.rectangle(0, 0, canvas.width, canvas.height, "clear")
+            //Sky
+            sky.draw();
+            //Ground
+            canvas.draw.rectangle(0, canvas.ground - (canvas.ground / 32), canvas.width, canvas.height, "FILL", { color: canvas.groundGradient });
+            //Buildings
+            buildings.draw();
+            //Darkener
+            canvas.draw.rectangle(0, 0, canvas.width, canvas.height, "fill", { color: `rgba(0, 0, 0, ${sky.darkener})` })
+            //Bullets
+            for (index in Bullets) {
+                bullet = Bullets[index]
+                canvas.draw.circle(bullet.position.x - canvas.offset, bullet.position.y + canvas.ground, 3, "both", { color: bullet.color, outColor: "white", lineWidth: .5, shadowBlur: 5, shadowOffset: 5 })
+            }
+            //Players
+            for (players of Players) {
+                typeof (players) != "undefined" && connection.readyState == 1 ? canvas.draw.player(players) : null;
+            }
+            //Viewfinder
+            canvas.draw.circle(cache.viewfinder.x, cache.viewfinder.y, 10, "stroke", { color: "red", shadowBlur: 10, shadowOffset: 10 })
+            //Main Menu
+            if (connection.readyState != 1 || cache.menu) {
+                //rectangle: (x, y, width, height, method = "fill", options = {})
+                canvas.draw.rectangle(canvas.width / 8, canvas.height / 10, 3 * canvas.width / 4, 4 * canvas.height / 5, "both", { color: "skyblue", lineJoin: "round", lineWidth: 10 })
+                canvas.draw.rectangle(canvas.width / 8, canvas.height / 10, 3 * canvas.width / 4, 4 * canvas.height / 5, "fill", { color: `rgba(0, 0, 0, ${sky.darkener})` })
+                canvas.draw.text("Vibing Balls", canvas.width / 2, 1 * canvas.height / 8, "both", { size: canvas.width / 12, color: "red", align: "center", baseline: "top", maxWidth: 3 * canvas.width / 4, shadowBlur: 10, shadowOffset: 10 })
+                canvas.draw.circle(canvas.width / 2, canvas.height / 2, menuCircle, "fill", { color: (typeof (Players[clientID]) != "undefined" ? Players[clientID].color : loginForm.color.value), shadowBlur: menuCircle / 10, shadowOffset: menuCircle / 10 })
+                canvas.draw.text(cache.connection.previouslyConnected && connection.readyState != 1 ? cache.connection.tries > 0 ? `Trying to Connect! (${cache.connection.tries}/5 Tries)` : `Connection Lost` : cache.menu && connection.readyState == 1 ? "Connected!" : "Connecting!", canvas.width / 2, 7 * canvas.height / 8, "both", { size: textSize, color: "red", align: "center", baseline: "bottom", maxWidth: 3 * canvas.width / 4, shadowBlur: 10, shadowOffset: 10 })
+                if(connection.readyState == 1 && clientID == -1) {
+                    //colorPath
+                    colorPath = new Path2D();
+                    colorPath.rect(5 * canvas.width/ 8, 15 * canvas.height / 32 , canvas.width/ 6, canvas.height / 16)
+                    canvas.ctx.fillStyle = loginForm.color.value
+                    canvas.ctx.fill(colorPath)
+                    usernamePath = new Path2D();
+                    usernamePath.rect(3 * canvas.width/ 16, 15 * canvas.height / 32 , canvas.width/ 6, canvas.height / 16)
+                    canvas.ctx.fillStyle = loginForm.color.value
+                    canvas.ctx.fill(usernamePath)
+                    //canvas.draw.circle(17 * canvas.width / 24, 25 * canvas.height / 32, 10, "fill", {color: canvas.ctx.isPointInPath(path, cache.mouse.x, cache.mouse.y) ? cache.mouse.button == 1 ? "blue" : "green" : "red"})
+                    color = parseColor(loginForm.color.value);
+                    textColor = `#${conHex(255-color[0])}${conHex(255-color[1])}${conHex(255-color[2])}`
+                    canvas.draw.text("Color", 17 * canvas.width / 24, canvas.height / 2, "fill", { color: textColor, size: (canvas.height / 27), align: "center", baseline: "middle", maxWidth: canvas.width/ 6, shadowBlur: 10, shadowOffset:10})
+                    canvas.draw.text(loginForm.username.value == "" ? "Username" : loginForm.username.value, 25 * canvas.width / 92, canvas.height / 2, "fill", { color: textColor, size: (canvas.height / 27), align: "center", baseline: "middle", maxWidth: canvas.width/ 6, shadowBlur: 10, shadowOffset:10})
+                    canvas.ctx.isPointInPath(colorPath, cache.mouse.x, cache.mouse.y) && cache.mouse.button == 1 && cache.mouse.lastButton != cache.mouse.button ? loginForm.colorClick() : null
+                    canvas.ctx.isPointInPath(usernamePath, cache.mouse.x, cache.mouse.y) && cache.mouse.button == 1 && cache.mouse.lastButton != cache.mouse.button ? loginForm.usernameClick() : null
+                }
+            }
+            if (connection.readyState == 1 && cache.menu1) {
+                //rectangle: (x, y, width, height, method = "fill", options = {})
+                canvas.draw.rectangle(canvas.width / 8, canvas.height / 10, 3 * canvas.width / 4, 4 * canvas.height / 5, "both", { color: "skyblue", lineJoin: "round", lineWidth: 10 })
+                canvas.draw.rectangle(canvas.width / 8, canvas.height / 10, 3 * canvas.width / 4, 4 * canvas.height / 5, "fill", { color: `rgba(0, 0, 0, ${sky.darkener})` })
+                canvas.draw.text("Vibing Balls", canvas.width / 2, 1 * canvas.height / 8, "both", { size: canvas.width / 12, color: "red", align: "center", baseline: "top", maxWidth: 3 * canvas.width / 4, shadowBlur: 10, shadowOffset: 10 })
+                offset1 = canvas.height / 12
+                offset2 = canvas.height / 12
+                canvas.draw.text(`ID | K / D | (K/D) | H / F | (H/F)`, 20 + canvas.width / 8, canvas.height / 4 + canvas.height / 24, "both", { color: "red", align: "left", baseline: "hanging", size: canvas.height / 24, maxWidth: canvas.width / 4 })
+                canvas.draw.text(`ID | K / D | (K/D) | H / F | (H/F)`, 7 * canvas.width / 8 - 20, canvas.height / 4 + canvas.height / 24, "both", { color: "red", align: "right", baseline: "hanging", size: canvas.height / 24, maxWidth: canvas.width / 4 })
+                for (index in Players) {
+                    players = Players[index]
+                    if (typeof (players) != "undefined") {
+                        //text: (text, x, y, method = "fill", options = {})
+                        if (players.id % 2 == 0) {
+                            canvas.draw.text(`${players.id}   | ${players.kills} / ${players.deaths} | (${!isNaN(players.kills / players.deaths) ? (players.kills / players.deaths).toFixed(2) : "0.00"}) | ${players.hit} / ${players.fired} | (${!isNaN(players.hit / players.fired) ? (players.hit / players.fired).toFixed(2) : "0.00"})`, 20 + canvas.width / 8, canvas.height / 4 + offset1, "both", { color: players.color, align: "left", baseline: "hanging", size: canvas.height / 24, maxWidth: canvas.width / 4 })
+                            offset1 += canvas.height / 24
+                        } else {
+                            canvas.draw.text(`${players.id}   | ${players.kills} / ${players.deaths} | (${!isNaN(players.kills / players.deaths) ? (players.kills / players.deaths).toFixed(2) : "0.00"}) | ${players.hit} / ${players.fired} | (${!isNaN(players.hit / players.fired) ? (players.hit / players.fired).toFixed(2) : "0.00"})`, 7 * canvas.width / 8 - 20, canvas.height / 4 + offset2, "both", { color: players.color, align: "right", baseline: "hanging", size: canvas.height / 24, maxWidth: canvas.width / 4 })
+                            offset2 += canvas.height / 24
+                        }
+                    }
+                }
+            }
+            var playerCount = 0;
+            for (player of Players) {
+                typeof player == "undefined" ? null : playerCount++;
+            }
+            if (typeof (Players[clientID]) != "undefined") {
+                $(".tooltip.top.right").innerHTML = `Gamemode: ${gamemode}<br>${playerCount} ${playerCount == 1 ? "player" : "players"} connected<br>${cache.frames[1]} FPS | Ping: ${ping}`;
+                $(".tooltip.top.left").innerHTML = `X: ${Math.floor(Players[clientID].position.x)}<br>Y: ${Math.abs(Math.floor(Players[clientID].position.y))}<br>${cache.calcDif.toFixed(2)}ms`;
+                $(".tooltip.bottom.left").innerHTML != `${controlTooltip[controlScheme[0]]}` ? $(".tooltip.bottom.left").innerHTML = `${controlTooltip[controlScheme[0]]}` : null;
+            }
+            for (tooltip of tooltips) {
+                tooltip.update()
+            }
+            connection.readyState == 1 ? connection.send(JSON.stringify({ event: "Player", message: Players[clientID] })) : null;
+            cache.frames[0]++;
+            //circle: (x, y, radius, method = "FILL", options = {})
+            window.requestAnimationFrame(render);
+        }
+    </script>
+</head>
+
+<body>
+    <canvas id="gameCanvas" onclick="clientID >= 0 ? this.requestPointerLock() : null "
+        oncontextmenu="return false;"></canvas>
+    <a class="tooltip bottom left"></a>
+    <a class="tooltip top left"></a>
+    <a class="tooltip top center-horiz"></a>
+    <a class="tooltip right center-vert" style="width: 25%; text-align: left;">
+        <div id="messages"></div>
+        <input id="chat" type="text" placeholder="Message" style="display:none;">
+    </a>
+    <a class="tooltip top right"></a>
+</body>
+</html>

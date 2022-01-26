@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script>
+            $ = (selector) => {
+                return document.querySelectorAll(selector).length > 1 ? document.querySelectorAll(selector) : document.querySelectorAll(selector)[0];
+            }
+            reader = new FileReader();
+            reader.onload = event => {
+                sendFile(JSON.stringify(
+                    {
+                        data: event.target.result,
+                        filename: $("input[type='file']").value.replace("C:\\fakepath\\","")
+                    }
+                ))
+            }
+            function isJSON(data) {
+                try {
+                    return JSON.parse(data);
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+            openFile = (file) => {
+                reader.readAsDataURL(file)
+            }
+            sendFile = (file) => {
+                $("img").src = JSON.parse(file).data;
+                console.log(JSON.parse(file).filename)
+                var connection = new WebSocket("wss://alphapuggle.dev:3453")
+                connection.onopen = () => {
+                    connection.send(file)
+                }
+                connection.onmessage = msg => {
+                    if(isJSON(msg)) {
+                        message = JSON.parse(msg);
+                        if(message.data == "received") {
+                            connection.close()
+                            alert("Recieved!")
+                        }
+                    }
+                }
+            }
+            var firstConnect
+            firstConnectTest = () => {
+                firstConnect = new WebSocket("wss://alphapuggle.dev:3453")
+                firstConnect.onopen = () => {
+                    $("#status").innerHTML = "Online"
+                    $("#status").style.backgroundColor = "lime"
+                }
+                firstConnect.onclose = () => {
+                    $("#status").innerHTML = "Disconnected"
+                    $("#status").style.backgroundColor = "red"
+                }
+                firstConnect.onerror = () => {
+                    $("#status").innerHTML = "Disconnected"
+                    $("#status").style.backgroundColor = "red"
+                    firstConnectTest();
+                }
+            }
+            firstConnectTest();
+        </script>
+    </head>
+    <body>
+        <a id="status" style="background-color: red;">Disconnected</a><br>
+        <input type="file" oninput="openFile(this.files[0])">
+        <img src="" style="width:100%; height:auto;">
+    </body>
+</html>
