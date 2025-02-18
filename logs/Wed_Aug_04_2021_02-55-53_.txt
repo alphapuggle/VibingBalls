@@ -1,4 +1,0 @@
--=-=START=-=-
-<8/4/2021 2:55:53> Vibing Balls - FFA Server Started<8/4/2021 2:55:53> Building Generation Completed
-<8/13/2021 3:33:9> Unverified Client - 35754a4736d842ceb6d97593ef520873 - 2605:59c1:d324:c00:54af:3d57:63b2:f903:53326
-<8/13/2021 4:31:55> Unverified Client - 35754a4736d842ceb6d97593ef520873 - 2605:59c1:d324:c00:a576:22d5:f997:2774:60012

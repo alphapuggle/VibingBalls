@@ -5,9 +5,8 @@
   "main": "server.js",
   "dependencies": {
     "uuid": "^8.3.2",
-    "ws": "^7.4.4"
+    "ws": "^7.5.10"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "node server.js",
     "start": "node server.js"

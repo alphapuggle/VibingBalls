@@ -3,13 +3,13 @@ const https = require('https');
 const WebSocket = require('ws');
 const os = require("os");
 const uuid = require("uuid");
-const SHA256 = require("/srv/Code/SHA256.js");
-const md5 = require("/srv/Code/md5.js");
+const SHA256 = require("./SHA256.js");
+const md5 = require("./md5.js");
 const validGamemodes = ["FFA", "TEAMS"];
 const teamColors = ["darkorange", "blue"]
 var launch = new Date()
-var logID = `/srv/Code/VibingBalls/logs/${launch.toString().split("GMT")[0]}.txt`.replace(new RegExp(" ", "g"), "_").replace(new RegExp(":", "g"), "-")
-var bannedIPs = "/srv/Code/VibingBalls/bannedIPs.txt"
+var logID = `./logs/${launch.toString().split("GMT")[0]}.txt`.replace(new RegExp(" ", "g"), "_").replace(new RegExp(":", "g"), "-")
+var bannedIPs = "./bannedIPs.txt"
 var bannedWords = [
     "nigger",
     "gay",

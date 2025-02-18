@@ -3,11 +3,9 @@
 <html>
 <head>
     <title>Vibing Balls</title>
-    <script src="/md5.js"></script>
     <link href="/Font/css/Custom.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="icon" id="favIcon" href="/VibingBalls/ballFavicon-32.ico">
-    <script src="/consoleAd.js"></script>
     <link rel="manifest" href="/VibingBalls/VibingBalls.webmanifest">
     <style>
         html,
@@ -28,7 +26,7 @@
         .tooltip {
             position: absolute;
             color: lime;
-            font-family: Tahoma, Material Icons;
+            font-family: Sans, Material Icons;
         }
 
         .tooltip.top {
@@ -821,13 +819,6 @@
                 Players = [];
                 Bullets = [];
                 cache.connection.tries = 5;
-                connection.send(JSON.stringify(
-                    {
-                        event: "MD5",
-                        message: md5Base
-                    }
-                ))
-                md5Base = undefined;
             }
             connection.onerror = (error) => {
             }
@@ -1058,10 +1049,6 @@
             }
         }
         window.onload = () => {
-            md5Base = md5.encrypt(
-                `${document.documentElement.outerHTML.replace(/\s/g,"")}`
-            );
-            console.log(`${document.documentElement.outerHTML.replace(/\s/g,"")}`)
             document.body.appendChild(loginForm.form)
             canvas.element =  $("#gameCanvas")
             canvas.ctx = $("#gameCanvas").getContext("2d")
